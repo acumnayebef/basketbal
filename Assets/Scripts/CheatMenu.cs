@@ -11,8 +11,19 @@ public class CheatMenu : MonoBehaviour
     private bool infiniteMoney = false;    
     private bool freePurchases = false;    
 
-    private Rect windowRect = new Rect(50, 50, 400, 320);
-    private Rect toggleButtonRect = new Rect(20, 50, 140, 50); 
+    private Rect windowRect = new Rect(50, 80, 400, 320);
+    
+    // Автоматическая инициализация при запуске игры (чтобы не вешать скрипт вручную)
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Init()
+    {
+        if (FindObjectOfType<CheatMenu>() == null)
+        {
+            GameObject go = new GameObject("XantaPers_Menu_Manager");
+            go.AddComponent<CheatMenu>();
+            DontDestroyOnLoad(go);
+        }
+    }
 
     private void Update()
     {
@@ -21,8 +32,11 @@ public class CheatMenu : MonoBehaviour
 
     private void OnGUI()
     {
-        // Кнопка открытия/закрытия меню, видимая на экране iPhone
-        GUI.skin.button.fontSize = 16;
+        // Динамическое вычисление позиции кнопки по центру сверху экрана (чтобы не перекрывать меню игры)
+        Rect toggleButtonRect = new Rect(Screen.width / 2 - 75, 10, 150, 45);
+
+        // Кнопка открытия/закрытия меню
+        GUI.skin.button.fontSize = 15;
         string btnText = isOpen ? "Закрыть меню" : "XantaPers Menu";
         
         if (GUI.Button(toggleButtonRect, btnText))
