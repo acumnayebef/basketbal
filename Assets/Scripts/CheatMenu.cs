@@ -1,116 +1,136 @@
-using UnityEngine;
-using System;
+#import <UIKit/UIKit.h>
 
-public class CheatMenu : MonoBehaviour
-{
-    private bool isOpen = false;           // Меню по умолчанию закрыто, видна только плавающая кнопка
-    private int currentTab = 0;            // 0: Creators, 1: Player, 2: Money
+// Состояния функций мода
+static BOOL g_noMiss = NO;
+static BOOL g_autoDribble = NO;
+static BOOL g_infiniteMoney = NO;
+static BOOL g_freeIAP = NO;
 
-    private bool alwaysGreenShot = false;  
-    private bool bypassDefender = false;   
-    private bool infiniteMoney = false;    
-    private bool freePurchases = false;    
+// Менеджер графического интерфейса меню
+@interface ModMenuManager : NSObject
++ (instancetype)sharedInstance;
+- (void)showMenu;
+@end
 
-    private Rect windowRect = new Rect(50, 80, 400, 320);
-    
-    // Автоматическая инициализация при запуске игры (чтобы не вешать скрипт вручную)
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void Init()
-    {
-        if (FindObjectOfType<CheatMenu>() == null)
-        {
-            GameObject go = new GameObject("XantaPers_Menu_Manager");
-            go.AddComponent<CheatMenu>();
-            DontDestroyOnLoad(go);
-        }
-    }
+@implementation ModMenuManager
 
-    private void Update()
-    {
-        ApplyCheats();
-    }
-
-    private void OnGUI()
-    {
-        // Динамическое вычисление позиции кнопки по центру сверху экрана (чтобы не перекрывать меню игры)
-        Rect toggleButtonRect = new Rect(Screen.width / 2 - 75, 10, 150, 45);
-
-        // Кнопка открытия/закрытия меню
-        GUI.skin.button.fontSize = 15;
-        string btnText = isOpen ? "Закрыть меню" : "XantaPers Menu";
-        
-        if (GUI.Button(toggleButtonRect, btnText))
-        {
-            isOpen = !isOpen;
-        }
-
-        // Окно чит-меню
-        if (isOpen)
-        {
-            windowRect = GUI.Window(0, windowRect, DrawWindowContent, "XantaPers Cheat Menu (iOS)");
-        }
-    }
-
-    private void DrawWindowContent(int windowID)
-    {
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Creators", GUILayout.Height(35))) currentTab = 0;
-        if (GUILayout.Button("Player", GUILayout.Height(35))) currentTab = 1;
-        if (GUILayout.Button("Money", GUILayout.Height(35))) currentTab = 2;
-        GUILayout.EndHorizontal();
-
-        GUILayout.Space(10);
-
-        if (currentTab == 0)
-        {
-            GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>Создатель:</b> XantaPers");
-            GUILayout.Label("<b>Telegram:</b> @xantapers");
-            
-            if (GUILayout.Button("Открыть Telegram (@xantapers)", GUILayout.Height(35)))
-            {
-                Application.OpenURL("https://t.me/xantapers");
-            }
-            GUILayout.EndVertical();
-        }
-        else if (currentTab == 1)
-        {
-            GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>Настройки игрока</b>");
-            alwaysGreenShot = GUILayout.Toggle(alwaysGreenShot, " Без промахов (Green Release)");
-            bypassDefender = GUILayout.Toggle(bypassDefender, " Всегда обвод игрока");
-            GUILayout.EndVertical();
-        }
-        else if (currentTab == 2)
-        {
-            GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>Экономика</b>");
-            infiniteMoney = GUILayout.Toggle(infiniteMoney, " Бесконечные монеты");
-            freePurchases = GUILayout.Toggle(freePurchases, " Бесплатные покупки (In-App)");
-            
-            GUILayout.Space(5);
-            if (GUILayout.Button("Выдать +10,000 монет", GUILayout.Height(35)))
-            {
-                ForceAddMoney(10000);
-            }
-            GUILayout.EndVertical();
-        }
-
-        GUI.DragWindow(new Rect(0, 0, 10000, 30));
-    }
-
-    private void ApplyCheats()
-    {
-        try
-        {
-            if (alwaysGreenShot && BallShoot.Instance != null) { /* Логика */ }
-            if (infiniteMoney && AllDayRun.Instance != null) { /* Логика */ }
-        }
-        catch (Exception) { }
-    }
-
-    private void ForceAddMoney(int amount)
-    {
-        Debug.Log($"[XantaPers iOS] Выдано монет: {amount}");
-    }
++ (instancetype)sharedInstance {
+    static ModMenuManager *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[ModMenuManager alloc] init];
+    });
+    return sharedInstance;
 }
+
+- (void)showMenu {
+    UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
+    if (!keyWindow) return;
+
+    // Создаем нативное окно меню на базе UIAlertController (оптимально для tweak.mm без тяжелых движков вроде ImGui)
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"🏀 Basketball Mod Menu"
+                                                                   message:@"Управление игроком и магазином\nСоздатель: @xantapers"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    // Вкладка / Функции Player
+    [alert addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"🎯 Без промахов: %@", g_noMiss ? @"[ON]" : @"[OFF]"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        g_noMiss = !g_noMiss;
+        [self showMenu];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"💨 Обвод игрока: %@", g_autoDribble ? @"[ON]" : @"[OFF]"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        g_autoDribble = !g_autoDribble;
+        [self showMenu];
+    }]];
+
+    // Вкладка / Функции Money & IAP
+    [alert addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"💎 Бесконечные монеты: %@", g_infiniteMoney ? @"[ON]" : @"[OFF]"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        g_infiniteMoney = !g_infiniteMoney;
+        [self showMenu];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"🔓 Встроенные покупки (Free IAP): %@", g_freeIAP ? @"[ON]" : @"[OFF]"] style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        g_freeIAP = !g_freeIAP;
+        [self showMenu];
+    }]];
+
+    // Вкладка Creators
+    [alert addAction:[UIAlertAction actionWithTitle:@"📌 Creators: @xantapers" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://t.me/xantapers"] options:@{} completionHandler:nil];
+        [self showMenu];
+    }]];
+
+    [alert addAction:[UIAlertAction actionWithTitle:@"Закрыть меню" style:UIAlertActionStyleCancel handler:nil]];
+
+    // Показываем поверх игры
+    UIViewController *rootVC = keyWindow.rootViewController;
+    while (rootVC.presentedViewController) {
+        rootVC = rootVC.presentedViewController;
+    }
+    [rootVC presentViewController:alert animated:YES completion:nil];
+}
+
+@end
+
+// Плавающая кнопка запуска меню поверх игры
+@interface FloatingButtonLoader : NSObject
+@end
+
+@implementation FloatingButtonLoader
++ (void)load {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        UIWindow *window = [UIApplication sharedApplication].keyWindow;
+        if (!window) return;
+        
+        UIButton *floatBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        floatBtn.frame = CGRectMake(20, 120, 55, 55);
+        floatBtn.backgroundColor = [UIColor colorWithRed:0.1 green:0.1 blue:0.1 alpha:0.85];
+        [floatBtn setTitle:@"🏀" forState:UIControlStateNormal];
+        floatBtn.titleLabel.font = [UIFont systemFontOfSize:28];
+        floatBtn.layer.cornerRadius = 27.5;
+        floatBtn.layer.borderWidth = 2.0;
+        floatBtn.layer.borderColor = [UIColor orangeColor].CGColor;
+        
+        [floatBtn addTarget:[ModMenuManager sharedInstance] action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
+        [window addSubview:floatBtn];
+    });
+}
+end
+
+// ==========================================
+// IL2CPP ХУКИ (Замени имена классов/методов под свой dump.txt)
+// ==========================================
+
+%hook ScoreManager
+
+- (bool)IsShotSuccessful {
+    if (g_noMiss) {
+        return true; // Все броски летят точно в цель
+    }
+    return %orig;
+}
+
+%end
+
+%hook PlayerInventory
+
+- (void)SpendCoins:(int)amount {
+    if (g_infiniteMoney) {
+        return; // Отменяем списание монет при покупках
+    }
+    %orig(amount);
+}
+
+%end
+
+%hook IAPManager
+
+- (bool)BuyProduct:(NSString *)productId {
+    if (g_freeIAP) {
+        // Перехватываем покупку и выдаем товар бесплатно
+        return true; 
+    }
+    return %orig(productId);
+}
+
+%end
