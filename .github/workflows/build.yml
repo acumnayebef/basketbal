@@ -3,8 +3,6 @@ name: Build iOS Tweak / Dylib
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
   build:
@@ -19,16 +17,23 @@ jobs:
       with:
         xcode-version: 'latest-stable'
 
-    - name: Build Dylib
+    - name: Compile Dylib
       run: |
-        echo "Building dylib for iOS..."
-        # Здесь укажите команды компиляции (например, make, xcodebuild или вызов скрипта с Theos)
-        # Пример: make
+        mkdir -p build
+        echo "Compiling iOS dylib..."
         
+        # Если вы собираете через clang/gcc (пример для теста, чтобы файл появился):
+        # clang -dynamiclib -o build/CheatMenu.dylib Assets/Scripts/CheatMenu.cs ...
+        
+        # Либо если у вас настроен Makefile, просто вызовите:
+        # make
+        
+        # Временная заглушка, чтобы артефакт успешно загрузился и вы проверили скачивание:
+        touch build/CheatMenu.dylib
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: CompiledDylib
         path: |
-          *.dylib
           build/*.dylib
